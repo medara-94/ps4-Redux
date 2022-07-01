@@ -1,56 +1,69 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { connect } from "react-redux";
-import * as courseAction from "../../redux/actions/courseActions";
+import * as courseActions from "../../redux/actions/courseActions";
+import * as authorActions from "../../redux/actions/authorActions";
 import PropTypes from "prop-types";
 import { bindActionCreators } from "redux";
+import CourseList from "./CourseList";
 
-const CoursesPage = (props) => {
-  useEffect(() => {
-    props.actions.loadCourses;
-  }, [props.courses]);
+class CoursesPage extends React.Component {
+  componentDidMount() {
+    const { courses, authors, actions } = this.props;
 
-  return (
-    <>
-      <h2>Courses</h2>
-      {props.courses.map((course) => (
-        <div key={course.title}>{course.title}</div>
-      ))}
-    </>
-  );
-};
+    if (courses.length === 0) {
+      actions.loadCourses().catch(error => {
+        alert("Loading courses failed" + error);
+      });
+    }
+
+    if (authors.length === 0) {
+      actions.loadAuthors().catch(error => {
+        alert("Loading authors failed" + error);
+      });
+    }
+  }
+
+  render() {
+    return (
+      <>
+        <h2>Courses</h2>
+        <CourseList courses={this.props.courses} />
+      </>
+    );
+  }
+}
 
 CoursesPage.propTypes = {
+  authors: PropTypes.array.isRequired,
   courses: PropTypes.array.isRequired,
-  actions: PropTypes.object.isRequired,
+  actions: PropTypes.object.isRequired
 };
 
-//This func determines what state is passed to our component via props
-function mapStateToProps(state, ownProps) {
+function mapStateToProps(state) {
   return {
-    courses: state.courses,
+    courses:
+      state.authors.length === 0
+        ? []
+        : state.courses.map(course => {
+            return {
+              ...course,
+              authorName: state.authors.find(a => a.id === course.authorId).name
+            };
+          }),
+    authors: state.authors
   };
 }
-
-// This let us declare what actions to pass to our component on props
-// When omited our component gets a dispatch prop injected automatically, so it passes automatically dispatch
-
-/*
-function EsempiomapDispatchToPropsAsFunction(dispatch) {
-  return {
-    // createCourse: (course) => dispatch(courseAction.createCourse(course)),  // Modo esteso
-    actions: bindActionCreators(courseAction, dispatch),
-  };
-}
-//Esempio come oggetto, when declared as an obj, each property is automatically bound to dispatch
-const EsempiomapDispatchToPropsAsObj = {
-  createCourse: courseAction.createCourse,
-}; */
 
 function mapDispatchToProps(dispatch) {
   return {
-    // createCourse: (course) => dispatch(courseAction.createCourse(course)),  // Modo esteso
-    actions: bindActionCreators(courseAction, dispatch),
+    actions: {
+      loadCourses: bindActionCreators(courseActions.loadCourses, dispatch),
+      loadAuthors: bindActionCreators(authorActions.loadAuthors, dispatch)
+    }
   };
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(CoursesPage);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(CoursesPage);
